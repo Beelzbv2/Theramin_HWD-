@@ -1,2 +1,31 @@
 #codigo para el theramin
 
+--Definicion de los pines--
+const uint8_t TRIG_PIN = 6;
+const uint8_t ECHO_PIN = 7;
+const uint8_t SPEAKER_PIN = 8;
+
+const uint8_t BTN_GRAVE = 2;
+const uint8_t BTN_MEDIO = 3;
+const uint8_t BTN_AGUDO = 4;
+
+#frecuencias en Hz
+--Definicion de los rangos de tonos--
+ --Grave: Do3 a Do4 (131 - 262 Hz)--
+const int FREQ_GRAVE_MIN = 131;
+const int FREQ_GRAVE_MAX = 262;
+
+--Medio: Do4 a Do5 (262 - 523 Hz)--
+const int FREQ_MEDIO_MIN = 262;
+const int FREQ_MEDIO_MAX = 523;
+
+--Agudo: Do5 a Do6 (523 - 1047 Hz)--
+const int FREQ_AGUDO_MIN = 523;
+const int FREQ_AGUDO_MAX = 1047;
+
+#zona de uso
+--- Zona Útil de Distancia (en cm) ---
+const float DIST_MIN = 5.0;   // Menor distancia -> Tono más agudo
+const float DIST_MAX = 30.0;  // Mayor distancia -> Tono más grave
+
+
