@@ -2,7 +2,6 @@
 
 --Definicion de los pines--
 const uint8_t TRIG_PIN = 6;
-const uint8_t ECHO_PIN = 7;
 const uint8_t SPEAKER_PIN = 8;
 
 const uint8_t BTN_GRAVE = 2;
@@ -77,13 +76,13 @@ void leerPulsadores() {
     if (tiempoActual - ultimoTiempoDebounce > DEBOUNCE_DELAY) {
       if (digitalRead(BTN_GRAVE) == LOW) {
         rangoActual = GRAVE;
-        Serial.println("Rango cambiado: GRAVE (131 - 262 Hz)");
+        Serial.println("Rango cambiado: GRAVE");
       } else if (digitalRead(BTN_MEDIO) == LOW) {
         rangoActual = MEDIO;
-        Serial.println("Rango cambiado: MEDIO (262 - 523 Hz)");
+        Serial.println("Rango cambiado: MEDIO");
       } else if (digitalRead(BTN_AGUDO) == LOW) {
         rangoActual = AGUDO;
-        Serial.println("Rango cambiado: AGUDO (523 - 1047 Hz)");
+        Serial.println("Rango cambiado: AGUDO");
       }
       ultimoTiempoDebounce = tiempoActual;
     }
