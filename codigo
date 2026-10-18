@@ -25,7 +25,158 @@ const int FREQ_AGUDO_MAX = 1047;
 
 #zona de uso
 --- Zona Útil de Distancia (en cm) ---
-const float DIST_MIN = 5.0;   // Menor distancia -> Tono más agudo
-const float DIST_MAX = 30.0;  // Mayor distancia -> Tono más grave
+const float DIST_MIN = 5.0;   # Menor distancia -> Tono más agudo
+const float DIST_MAX = 30.0;  #Mayor distancia -> Tono más grave
+
+---Enumeración de Rangos Tonales---
+enum RangoTonal {
+  GRAVE,
+  MEDIO,
+  AGUDO
+};
+
+RangoTonal rangoActual = MEDIO; #Rango inicial por defecto
+
+---Variables para Filtrado y Temporización No Bloqueante---
+unsigned long ultimaMedicion = 0;
+const unsigned long INTERVALO_MEDICION = 50; #Muestreo cada 50 ms
+
+--- Variables para el filtro de promedio móvil (suavizado de distancia)---
+const int NUM_LECTURAS = 5;
+float lecturasDistancia[NUM_LECTURAS] = {0};
+int indiceLectura = 0;
+
+---Variables para antirrebote de botones---
+unsigned long ultimoTiempoDebounce = 0;
+const unsigned long DEBOUNCE_DELAY = 50;
+
+void setup() {
+  Serial.begin(9600);
+
+---Configuración de pines de ultrasonido---
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+
+---Configuración de pin de audio---
+  pinMode(SPEAKER_PIN, OUTPUT);
+
+---Configuración de pulsadores con Pull-Up interno---
+  pinMode(BTN_GRAVE, INPUT_PULLUP);
+  pinMode(BTN_MEDIO, INPUT_PULLUP);
+  pinMode(BTN_AGUDO, INPUT_PULLUP);
+
+  Serial.println("Theremin Digital Iniciado correctamente.");
+}
+
+---Modulo de lectura de botones---
+#Lee los botones y cambia el rango tonal activo de forma inmediata.
+
+void leerPulsadores() {
+  if (digitalRead(BTN_GRAVE) == LOW || digitalRead(BTN_MEDIO) == LOW || digitalRead(BTN_AGUDO) == LOW) {
+    unsigned long tiempoActual = millis();
+    if (tiempoActual - ultimoTiempoDebounce > DEBOUNCE_DELAY) {
+      if (digitalRead(BTN_GRAVE) == LOW) {
+        rangoActual = GRAVE;
+        Serial.println("Rango cambiado: GRAVE (131 - 262 Hz)");
+      } else if (digitalRead(BTN_MEDIO) == LOW) {
+        rangoActual = MEDIO;
+        Serial.println("Rango cambiado: MEDIO (262 - 523 Hz)");
+      } else if (digitalRead(BTN_AGUDO) == LOW) {
+        rangoActual = AGUDO;
+        Serial.println("Rango cambiado: AGUDO (523 - 1047 Hz)");
+      }
+      ultimoTiempoDebounce = tiempoActual;
+    }
+  }
+}
+
+---MÓDULO DE MEDICIÓN DE DISTANCIA---
+#Dispara el sensor ultrasónico y convierte el tiempo de eco a centímetros.
+float medirDistanciaCM() {
+  #Limpiar el pin TRIG
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  
+  #Enviar pulso ultrasónico de 10 microsegundos
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+
+  #Leer el tiempo del eco (timeout de 25ms para evitar bloqueos)
+  long duracion = pulseIn(ECHO_PIN, HIGH, 25000);
+
+  if (duracion == 0) {
+    return -1.0; // Lectura inválida o fuera de rango
+  }
+
+  #Conversión a cm basada en la velocidad del sonido (~343 m/s -> 0.0343 cm/us)
+  float distancia = (duracion * 0.0343) / 2.0;
+  return distancia;
+}
+
+---MÓDULO DE MAPEO Y GENERACIÓN DE SONIDO---
+#Mapea la distancia filtrada a frecuencia y controla el buzzer pasivo.
+void procesarSonidoYFrecuencia(float distancia) {
+  #Si la mano está fuera de la zona útil, silenciar el theremin
+  if (distancia < DIST_MIN || distancia > DIST_MAX) {
+    noTone(SPEAKER_PIN);
+    return;
+  }
+
+  int freqMin = 0;
+  int freqMax = 0;
+
+  #Selección de límites según el rango tonal activo
+  switch (rangoActual) {
+    case GRAVE:
+      freqMin = FREQ_GRAVE_MIN;
+      freqMax = FREQ_GRAVE_MAX;
+      break;
+    case MEDIO:
+      freqMin = FREQ_MEDIO_MIN;
+      freqMax = FREQ_MEDIO_MAX;
+      break;
+    case AGUDO:
+      freqMin = FREQ_AGUDO_MIN;
+      freqMax = FREQ_AGUDO_MAX;
+      break;
+  }
+
+  #Comportamiento de Theremin clásico: a menor distancia, mayor frecuencia (agudo)
+  int frecuencia = map(distancia, DIST_MIN, DIST_MAX, freqMax, freqMin);
+  frecuencia = constrain(frecuencia, freqMin, freqMax);
+
+  #Emitir tono en el zumbador pasivo
+  tone(SPEAKER_PIN, frecuencia);
+}
+
+void loop() {
+  leerPulsadores();
+
+  #Control temporal para la lectura del sensor ultrasónico sin congelar el loop
+  unsigned long tiempoActual = millis();
+  if (tiempoActual - ultimaMedicion >= INTERVALO_MEDICION) {
+    ultimaMedicion = tiempoActual;
+
+    float distanciaCruda = medirDistanciaCM();
+    float distanciaFiltrada = filtrarDistancia(distanciaCruda);
+
+  #Procesar y emitir el sonido basado en la distancia estabilizada
+    procesarSonidoYFrecuencia(distanciaFiltrada);
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
